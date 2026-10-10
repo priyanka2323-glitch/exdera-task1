@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Route Optimizer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    
+</head>
+<body>
+    
+    <header class="header">
+        <div class="brand-lockup">
+            <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div>
+                <p class="brand-kicker">FLEET OPERATIONS · ROUTE DESK</p>
+                <h1>Dispatch<span>board</span></h1>
+                <p>Build a smarter day on the road.</p>
+            </div>
+        </div>
+        <div class="header-meta"><span class="status"><i></i> Planner ready</span><span class="header-caption">DELIVERY ROUTE OPTIMIZER</span></div>
+    </header>
+
+    <main class="container">
+        <section class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">01 / PLAN</p><h2>Route configuration</h2></div><span class="step-tag">SETUP</span></div>
+            <p class="muted">Choose straight-line planning or OSRM road routing. Straight-line coordinates are treated as kilometres; OSRM requires longitude, latitude near drivable roads. Priority 1 is highest.</p>
+
+            <div class="settings">
+                <h3>Travel and schedule</h3>
+                <label>Routing source
+                    <select id="routingMode"><option value="straight_line">Straight-line estimate</option><option value="osrm">OSRM road routes</option></select>
+                </label>
+                <button type="button" id="loadOsrmDemo" class="demo-button" hidden>Load Berlin road demo</button>
+                <label>Departure time <input id="departureTime" type="time" value="09:00" required></label>
+                <label>Average speed for straight-line mode (km/h) <input id="speedKph" type="number" min="1" max="160" value="30" required></label>
+                <label>Penalty per minute outside a time window <input id="latePenalty" type="number" min="0" max="10000" step="0.5" value="10" required></label>
+            </div>
+
+            <form id="routeForm">
+                <h3>Warehouse Location</h3>
+                <div class="coordinate-grid">
+                    <label>
+                        X / Longitude
+                        <input id="warehouseX" type="number"
+                               step="any" value="0" required>
+                    </label>
+                    <label>
+                        Y / Latitude
+                        <input id="warehouseY" type="number"
+                               step="any" value="0" required>
+                    </label>
+                </div>
+
+                <div class="section-heading">
+                    <h3>Delivery Locations</h3>
+                    <button type="button" id="addDelivery"
+                            class="secondary-button">+ Add Stop</button>
+                </div>
+
+                <div id="deliveries"></div>
+
+                <div class="settings">
+                    <h3>Priority vs distance</h3>
+                    <label>Priority weight <input id="priorityWeight" type="number" min="0" max="10000" step="0.1" value="1" required></label>
+                    <p class="muted">Higher values favor serving high-priority deliveries earlier, even when that adds distance. Set to 0 for shortest distance only.</p>
+                </div>
+
+                <button type="submit" id="optimizeButton"
+                        class="primary-button">
+                    Optimize Route
+                </button>
+                <p id="message" role="status"></p>
+            </form>
+        </section>
+
+        <section class="panel results-panel">
+            <div class="panel-heading"><div><p class="eyebrow">02 / REVIEW</p><h2>Route intelligence</h2></div><span class="step-tag step-tag-muted">LIVE RESULT</span></div>
+            <p class="muted">Your delivery plan, timing, and route trade-offs.</p>
+
+            <div class="metrics">
+                <div class="metric">
+                    <span>Total Distance</span>
+                    <strong id="totalDistance">—</strong><small>coordinate units</small>
+                </div>
+                <div class="metric">
+                    <span>Objective Score</span>
+                    <strong id="totalCost">—</strong>
+                </div>
+            </div>
+
+            <h3>Optimized Sequence</h3>
+            <p id="algorithmInfo" class="muted">Exact optimization up to 8 stops; local search for larger routes.</p>
+            <div id="routeSequence" class="route-sequence">
+                Submit your delivery locations to calculate a route.
+            </div>
+
+            <h3>Travel Legs</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Distance</th><th>Travel time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="legsBody">
+                        <tr>
+                            <td colspan="4">No route calculated yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Delivery schedule</h3>
+            <div id="scheduleList" class="schedule-list">No schedule yet.</div>
+            <p id="routingSource" class="muted"></p>
+
+            <details class="note"><summary>How optimization works</summary><p>The score combines distance, priority delay, and minutes outside delivery windows. For up to 8 stops, the planner evaluates every order. For larger lists, it starts from a nearest-stop route and improves it using 2-opt and stop relocation. Every route starts and ends at the warehouse.</p><p>OSRM uses the public OSRM table service and OpenStreetMap road data to return driving distance and expected duration. It is not live traffic data. Straight-line mode uses your average-speed estimate. Time windows use same-day 24-hour times; waiting is allowed before a window opens. Late arrivals add the displayed penalty. Coordinates and time windows are validated.</p></details>
+        </section>
+
+        <section class="panel live-panel">
+            <div class="panel-heading"><div><p class="eyebrow">03 / RESPOND</p><h2>Live order modification</h2></div><span class="step-tag step-tag-alert">ON THE ROAD</span></div>
+            <p class="muted">After generating a route, add an emergency delivery and compare immediate interception with the lowest-cost later insertion. Completed stops stay out of the active sequence.</p>
+            <form id="liveForm">
+                <div class="coordinate-grid"><label>Driver current X / longitude<input id="driverX" type="number" step="any" required></label><label>Driver current Y / latitude<input id="driverY" type="number" step="any" required></label><label>Current driver time<input id="driverTime" type="time" value="09:00" required></label></div>
+                <label>Active uncompleted sequence<input id="activeOrder" type="text" placeholder="D2, D3 (leave blank if none)"></label>
+                <div class="coordinate-grid"><label>Emergency X / longitude<input id="emergencyX" type="number" step="any" required></label><label>Emergency Y / latitude<input id="emergencyY" type="number" step="any" required></label></div>
+                <div class="coordinate-grid"><label>Emergency priority<select id="emergencyPriority"><option value="1">1 · High</option><option value="2">2 · Medium</option><option value="3">3 · Low</option></select></label><label>Window start<input id="emergencyStart" type="time" value="09:00" required></label><label>Window end<input id="emergencyEnd" type="time" value="23:59" required></label><label>Service time (minutes)<input id="emergencyService" type="number" min="0" value="0" required></label></div>
+                <button type="submit" id="liveButton" class="secondary-button">Compare live options</button>
+            </form>
+            <div id="liveResults" class="live-results" aria-live="polite">Optimize a route first to load its delivery list.</div>
+        </section>
+    </main>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
