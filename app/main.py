@@ -96,6 +96,11 @@ def home(request: Request):
     return templates.TemplateResponse(request=request, name="index.html", context={})
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.post("/optimize-route")
 def optimize_route(data: RouteRequest):
     try:

@@ -13,6 +13,10 @@ uvicorn app.main:app --reload
 
 Open http://127.0.0.1:8000. Add delivery points, priorities, same-day time windows, and service duration. Select straight-line estimates or OSRM road routing. For OSRM, enter longitude/latitude coordinates close to drivable roads. Click **Load Berlin road demo** to populate a known sample from the OSRM documentation. Straight-line mode accepts planar coordinates and estimates travel time using the configured average speed.
 
+## Deploy to Render
+
+The root `render.yaml` defines a Singapore-region Python web service, health check, Python version, and production Uvicorn command. Push the project to a GitHub repository, then in Render choose **New → Blueprint**, connect that repository, and apply the blueprint. Render builds with `pip install -r requirements.txt`; after deployment, open the generated `onrender.com` URL. The health endpoint is `/health` and the API documentation is available at `/docs`.
+
 ## Route API
 
 `POST /optimize-route`
